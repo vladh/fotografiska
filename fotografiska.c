@@ -41,13 +41,17 @@ int main() {
       continue;
     }
     fseek(f_handle, 0, SEEK_SET);
-    fread(f_buffer, 1, f_size, f_handle);
+    if (fread(f_buffer, 1, f_size, f_handle) == 0) {
+      printf("ERROR: File is too big %s\n", f_info.path);
+      fclose(f_handle);
+      continue;
+    }
     fclose(f_handle);
     printf("%s is %zu\n", f_info.path, f_size);
     f_buffer[f_size] = 0;
 
     XXH64_hash_t hash = XXH64(f_buffer, f_size, 0);
-    printf("%s -> %llx\n", f_info.name, hash);
+    printf("%s -> %lx\n", f_info.name, hash);
   }
 
   tinydir_close(&dir);
