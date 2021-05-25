@@ -10,48 +10,71 @@
 #include "external/xxhash.c"
 
 
+typedef struct FileInfo {
+  size_t file_size;
+  size_t hashable_size;
+  tinydir_file file;
+  FILE *handle;
+} FileInfo;
+
+
 const char IN_DIR[] = "test/in/";
+const uint32 MAX_HASHABLE_SIZE = MB_TO_B(10);
+
+
+void move_file(FileInfo *f, char *buffer, size_t buffer_size) {
+  // Open file
+  f->handle = fopen(f->file.path, "r");
+  if (f->handle == NULL) {
+    printf("ERROR: Could not open file %s\n", f->file.path);
+    goto cleanup_return;
+  }
+
+  // Get file size (we will only hash a max of MAX_HASHABLE_SIZE bytes)
+  fseek(f->handle, 0, SEEK_END);
+  f->file_size = ftell(f->handle);
+  if (f->file_size >= buffer_size) {
+    f->hashable_size = buffer_size;
+  } else {
+    f->hashable_size = f->file_size;
+  }
+
+  // Read hashable portion into buffer
+  fseek(f->handle, 0, SEEK_SET);
+  if (fread(buffer, 1, f->hashable_size, f->handle) < f->hashable_size) {
+    printf("ERROR: Could not read entire hashable portion of file %s\n", f->file.path);
+    goto cleanup_fclose;
+  }
+
+  // Compute the hash
+  XXH64_hash_t hash = XXH64(buffer, f->hashable_size, 0);
+
+  printf("%s (%zu) -> %lx\n", f->file.path, f->hashable_size, hash);
+
+cleanup_fclose:
+  fclose(f->handle);
+cleanup_return:
+  ;
+}
 
 
 int main() {
-  size_t buffer_size = MB_TO_B(256);
-  char *f_buffer = (char*)malloc(buffer_size);
-  size_t f_size;
-  FILE *f_handle = NULL;
-  tinydir_file f_info;
+  FileInfo f;
+  size_t buffer_size = MAX_HASHABLE_SIZE;
+  char *buffer = (char*)malloc(buffer_size);
 
   tinydir_dir dir;
   tinydir_open_sorted(&dir, IN_DIR);
-  printf("%zu files\n", dir.n_files);
+  printf("%s: %zu files\n", IN_DIR, dir.n_files);
 
-  for (uint32 i = 0; i < dir.n_files; i++) {
-    tinydir_readfile_n(&dir, &f_info, i);
-    if (f_info.name[0] == '.' || f_info.is_dir) { continue; }
-
-    f_handle = fopen(f_info.path, "r");
-    if (f_handle == NULL) {
-      printf("ERROR: Could not open file %s\n", f_info.name);
+  for (uint32 idx = 0; idx < dir.n_files; idx++) {
+    // Get files in directory
+    tinydir_readfile_n(&dir, &f.file, idx);
+    if (f.file.name[0] == '.' || f.file.is_dir) {
       continue;
     }
-    fseek(f_handle, 0, SEEK_END);
-    f_size = ftell(f_handle);
-    if (f_size >= buffer_size) {
-      printf("ERROR: File is too big %s\n", f_info.path);
-      fclose(f_handle);
-      continue;
-    }
-    fseek(f_handle, 0, SEEK_SET);
-    if (fread(f_buffer, 1, f_size, f_handle) == 0) {
-      printf("ERROR: File is too big %s\n", f_info.path);
-      fclose(f_handle);
-      continue;
-    }
-    fclose(f_handle);
-    printf("%s is %zu\n", f_info.path, f_size);
-    f_buffer[f_size] = 0;
-
-    XXH64_hash_t hash = XXH64(f_buffer, f_size, 0);
-    printf("%s -> %lx\n", f_info.name, hash);
+    // Try to put this file in the right place
+    move_file(&f, buffer, buffer_size);
   }
 
   tinydir_close(&dir);
