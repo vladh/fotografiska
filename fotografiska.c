@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include <libexif/exif-data.h>
 #include "external/tinydir.h"
 #include "external/xxhash.h"
 
