@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <time.h>
+#include <string.h>
 
 #include <libexif/exif-data.h>
 #include "external/tinydir.h"
@@ -13,22 +14,14 @@
 #include "external/xxhash.c"
 
 
-typedef struct FileInfo {
-  char basename[MAX_PATH];
-  char creation_date[128];
-  size_t file_size;
-  size_t hashable_size;
-  tinydir_file file;
-  FILE *handle;
-} FileInfo;
-
-
-const char IN_DIR[] = "test/in/";
 const uint32 MAX_HASHABLE_SIZE = MB_TO_B(10);
 
 
-void format_date(char *date) {
-  size_t len = strlen(date);
+/*!
+  Turn a date from YYYY:mm:dd HH:MM:SS to YYYY.mm.dd_HH.MM.SS
+*/
+void format_exif_date(char *date) {
+  size_t const len = strlen(date);
   for (uint32 idx = 0; idx < len; idx++) {
     if (date[idx] == ':') {
       date[idx] = '.';
@@ -39,12 +32,15 @@ void format_date(char *date) {
 }
 
 
-/* Show the tag name and contents if the tag exists */
-static bool32 get_tag(ExifData *d, ExifIfd ifd, ExifTag tag, char *buf, size_t buf_size) {
-  /* See if this tag exists */
+/*!
+  Returns the value of an EXIF `tag` in the buffer `buf`.
+*/
+bool32 get_exif_tag(
+  ExifData const *d, ExifIfd const ifd, ExifTag const tag,
+  char *buf, size_t const buf_size
+) {
   ExifEntry *entry = exif_content_get_entry(d->ifd[ifd], tag);
   if (entry) {
-    /* Get the contents of the tag in human-readable form */
     exif_entry_get_value(entry, buf, buf_size);
     return true;
   }
@@ -52,95 +48,176 @@ static bool32 get_tag(ExifData *d, ExifIfd ifd, ExifTag tag, char *buf, size_t b
 }
 
 
-void move_file(FileInfo *finfo, char *file_buffer, size_t file_buffer_size) {
+/*!
+  Parses a YYYY.mm.dd_HH.MM.SS Date to extract the year into `file_creation_year`
+  and the month into `file_creation_month`.
+*/
+void split_creation_date(
+  char const *file_creation_date, char *file_creation_year, char *file_creation_month
+) {
+  strncpy(file_creation_year, file_creation_date, 4);
+  file_creation_year[4] = 0;
+  strncpy(file_creation_month, file_creation_date + 5, 2);
+  file_creation_month[2] = 0;
+}
+
+
+/*!
+  Puts a file into its correct place in the output directory.
+*/
+void move_file(
+  tinydir_file const *file, char *file_buffer, size_t const file_buffer_size,
+  char const *dest_dir
+) {
+  uint32 const BASENAME_MAX_LENGTH = 160;
+  char file_basename[BASENAME_MAX_LENGTH];
+  char file_new_path[MAX_PATH];
+  char file_creation_date[20]; // YYYY.mm.dd_HH.MM.SS0
+  char file_creation_year[5]; // YYYY0
+  char file_creation_month[3]; // mm0
+  size_t file_size;
+  size_t file_hashable_size;
+  FILE *file_handle;
+
   // Open file
-  finfo->handle = fopen(finfo->file.path, "r");
-  if (finfo->handle == NULL) {
-    printf("ERROR: Could not open file %s\n", finfo->file.path);
+  file_handle = fopen(file->path, "r");
+  if (file_handle == NULL) {
+    printf("ERROR: Could not open file %s\n", file->path);
     goto cleanup_return;
   }
 
   // Get name without extension
-  strcpy(finfo->basename, finfo->file.name);
-  finfo->basename[strlen(finfo->file.name) - strlen(finfo->file.extension) - 1] = 0;
+  // Limit the number of characters, because we will put this basename into a longer
+  // path later.
+  strncpy(file_basename, file->name, BASENAME_MAX_LENGTH - 1);
+  if (strlen(file_basename) < BASENAME_MAX_LENGTH - 1) {
+    // Only chop off the extension if we didn't truncate the filename
+    file_basename[strlen(file_basename) - strlen(file->extension) - 1] = 0;
+  } else {
+    file_basename[BASENAME_MAX_LENGTH - 1] = 0;
+  }
 
-  // Get EXIF date
-  ExifData *exif_data = exif_data_new_from_file(finfo->file.path);
+  // Get creation date
+  ExifData const *exif_data = exif_data_new_from_file(file->path);
   bool32 could_get_exif = false;
 
   if (exif_data) {
-    could_get_exif = get_tag(
+    could_get_exif = get_exif_tag(
       exif_data, EXIF_IFD_0, EXIF_TAG_DATE_TIME,
-      finfo->creation_date, sizeof(finfo->creation_date)
+      file_creation_date, sizeof(file_creation_date)
     );
   }
 
   // If we could get the EXIF data, great, format it.
   // If not, get the creation date from the filemtime.
   if (could_get_exif) {
-    format_date(finfo->creation_date);
+    format_exif_date(file_creation_date);
   } else {
-    struct tm *creation_date_tm = localtime(&finfo->file._s.st_mtim.tv_sec);
+    struct tm const *creation_date_tm = localtime(&file->_s.st_mtim.tv_sec);
     strftime(
-      finfo->creation_date, sizeof(finfo->creation_date),
+      file_creation_date, sizeof(file_creation_date),
       "%Y.%m.%d_%H.%M.%S", creation_date_tm
     );
   }
 
+  // Set file_creation_year and file_creation_month
+  split_creation_date(file_creation_date, file_creation_year, file_creation_month);
+
   // Get file size (we will only hash a max of MAX_HASHABLE_SIZE bytes)
-  fseek(finfo->handle, 0, SEEK_END);
-  finfo->file_size = ftell(finfo->handle);
-  if (finfo->file_size >= file_buffer_size) {
-    finfo->hashable_size = file_buffer_size;
+  fseek(file_handle, 0, SEEK_END);
+  file_size = ftell(file_handle);
+  if (file_size >= file_buffer_size) {
+    file_hashable_size = file_buffer_size;
   } else {
-    finfo->hashable_size = finfo->file_size;
+    file_hashable_size = file_size;
   }
 
   // Read hashable portion into file_buffer
-  fseek(finfo->handle, 0, SEEK_SET);
-  if (fread(file_buffer, 1, finfo->hashable_size, finfo->handle) < finfo->hashable_size) {
-    printf("ERROR: Could not read entire hashable portion of file %s\n", finfo->file.path);
+  fseek(file_handle, 0, SEEK_SET);
+  if (fread(file_buffer, 1, file_hashable_size, file_handle) < file_hashable_size) {
+    printf("ERROR: Could not read entire hashable portion of file %s\n", file->path);
     goto cleanup_fclose;
   }
 
   // Compute the hash
-  XXH64_hash_t hash = XXH64(file_buffer, finfo->hashable_size, 0);
+  XXH64_hash_t const hash = XXH64(file_buffer, file_hashable_size, 0);
 
-  printf(
-    "%s (name %s) (ext %s) (hs %zu) (exif %d) (date %s) -> %lx\n",
-    finfo->file.path,
-    finfo->basename,
-    finfo->file.extension,
-    finfo->hashable_size,
-    could_get_exif,
-    finfo->creation_date,
-    hash
+  snprintf(
+    file_new_path,
+    MAX_PATH,
+    "%s/%s/%s/%s_%lx_%s.%s",
+    dest_dir,
+    file_creation_year,
+    file_creation_month,
+    file_creation_date,
+    hash,
+    file_basename,
+    file->extension
   );
 
+  printf("%s -> %s\n", file->path, file_new_path);
+
 cleanup_fclose:
-  fclose(finfo->handle);
+  fclose(file_handle);
 cleanup_return:
   ;
 }
 
 
-int main() {
-  size_t file_buffer_size = MAX_HASHABLE_SIZE;
+void print_usage() {
+  char const *USAGE = ""
+    "fotograiska\n"
+    "-----------\n"
+    "\n"
+    "fotografiska will read images/videos from an input directory, name them according to\n"
+    "a certain schema, and put them in a YYYY/mm/ folder structure in a destination\n"
+    "directory.\n"
+    "\n"
+    "The final filename will look something like this:\n"
+    "  YYYY.mm.dd_hh.mm.ss_hashcafebabe_originalname.ext\n"
+    "for example:\n"
+    "  2020.09.16-18.38.23_4487bfd46ccb74b7_DSCF4506.JPG\n"
+    "\n"
+    "Usage: ./fotografiska <source_dir> <dest_dir>\n"
+    "  source_dir: A folder containing images/videos to read from\n"
+    "  dest_dir: A folder to move the files from source_dir into, with the following structure:\n"
+    "    2021/\n"
+    "      01/\n"
+    "      02/\n"
+    "        xxxxxxx.jpg\n"
+    "        ...\n"
+    "      ...\n"
+    "    ...\n";
+  printf("%s", USAGE);
+}
+
+
+/*!
+*/
+int main(int argc, char **argv) {
+  if (argc < 3) {
+    print_usage();
+    return 1;
+  }
+
+  char const *src_dir = argv[1];
+  char const *dest_dir = argv[2];
+
+  size_t const file_buffer_size = MAX_HASHABLE_SIZE;
   char *file_buffer = (char*)malloc(file_buffer_size);
 
   tinydir_dir dir;
-  tinydir_open_sorted(&dir, IN_DIR);
-  printf("%s: %zu files\n", IN_DIR, dir.n_files);
+  tinydir_open_sorted(&dir, src_dir);
+  printf("%s: %zu files\n", src_dir, dir.n_files);
 
+  // Go through over every file in the directory, and try to put it in the right place
   for (uint32 idx = 0; idx < dir.n_files; idx++) {
-    FileInfo finfo = {};
-    // Get files in directory
-    tinydir_readfile_n(&dir, &finfo.file, idx);
-    if (finfo.file.name[0] == '.' || finfo.file.is_dir) {
+    tinydir_file file;
+    tinydir_readfile_n(&dir, &file, idx);
+    if (file.name[0] == '.' || file.is_dir) {
       continue;
     }
-    // Try to put this file in the right place
-    move_file(&finfo, file_buffer, file_buffer_size);
+    move_file(&file, file_buffer, file_buffer_size, dest_dir);
   }
 
   tinydir_close(&dir);
