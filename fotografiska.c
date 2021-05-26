@@ -1,3 +1,4 @@
+// C lib headers
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -5,13 +6,25 @@
 #include <time.h>
 #include <string.h>
 
+// External libraries
 #include <libexif/exif-data.h>
 #include "external/tinydir.h"
 #include "external/xxhash.h"
+#include "external/argparse.h"
 
+// Our headers
 #include "types.h"
 
+// Unity build for simplicity
 #include "external/xxhash.c"
+#include "external/argparse.c"
+
+
+#if defined(__APPLE__) || defined(__NetBSD__)
+#define st_atim st_atimespec
+#define st_ctim st_ctimespec
+#define st_mtim st_mtimespec
+#endif
 
 
 const uint32 MAX_HASHABLE_SIZE = MB_TO_B(10);
@@ -145,12 +158,12 @@ void move_file(
   snprintf(
     file_new_path,
     MAX_PATH,
-    "%s/%s/%s/%s_%lx_%s.%s",
+    "%s/%s/%s/%s_%llx_%s.%s",
     dest_dir,
     file_creation_year,
     file_creation_month,
     file_creation_date,
-    hash,
+    (uint64)hash,
     file_basename,
     file->extension
   );
@@ -193,6 +206,7 @@ void print_usage() {
 
 
 /*!
+  See print_usage() for options.
 */
 int main(int argc, char **argv) {
   if (argc < 3) {
