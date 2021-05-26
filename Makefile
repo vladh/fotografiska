@@ -1,7 +1,7 @@
 .PHONY: all run
 
 all:
-	gcc fotografiska.c -o bin/fotografiska -O2 -g -Wall -Werror
+	gcc fotografiska.c -o bin/fotografiska -lexif -g -Wall
 
 run: all
 	./bin/fotografiska
