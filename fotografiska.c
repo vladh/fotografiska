@@ -27,7 +27,34 @@
 #endif
 
 
-const uint32 MAX_HASHABLE_SIZE = MB_TO_B(10);
+uint32 const MAX_HASHABLE_SIZE = MB_TO_B(10);
+char const * const USAGE_PARTS[] = {"fotografiska [options]", NULL};
+char const *USAGE_BODY = ""
+  "\n"
+  "fotografiska\n"
+  "------------\n"
+  "\n"
+  "fotografiska will read images/videos from an input directory, name them according to\n"
+  "a certain schema, and put them in a YYYY/mm/ folder structure in a destination\n"
+  "directory.\n"
+  "\n"
+  "The final filename will look something like this:\n"
+  "  YYYY.mm.dd_hh.mm.ss_hashcafebabe_originalname.ext\n"
+  "for example:\n"
+  "  2020.09.16-18.38.23_4487bfd46ccb74b7_DSCF4506.JPG\n"
+  "\n"
+  "Options:";
+char const *USAGE_EPILOGUE = ""
+  "\n"
+  "The destination directory should follow this directory structure:\n"
+  "\n"
+  "    2021/\n"
+  "      01/\n"
+  "      02/\n"
+  "        xxxxxxx.jpg\n"
+  "        ...\n"
+  "      ...\n"
+  "    ...\n";
 
 
 /*!
@@ -80,7 +107,7 @@ void split_creation_date(
 */
 void move_file(
   tinydir_file const *file, char *file_buffer, size_t const file_buffer_size,
-  char const *dest_dir
+  char const *dest_dir, bool32 is_dry_run
 ) {
   uint32 const BASENAME_MAX_LENGTH = 160;
   char file_basename[BASENAME_MAX_LENGTH];
@@ -168,7 +195,11 @@ void move_file(
     file->extension
   );
 
-  printf("%s -> %s\n", file->path, file_new_path);
+  if (is_dry_run) {
+    printf("%s -> %s\n", file->path, file_new_path);
+  } else {
+    printf("???????? %s -> %s\n", file->path, file_new_path);
+  }
 
 cleanup_fclose:
   fclose(file_handle);
@@ -177,45 +208,31 @@ cleanup_return:
 }
 
 
-void print_usage() {
-  char const *USAGE = ""
-    "fotograiska\n"
-    "-----------\n"
-    "\n"
-    "fotografiska will read images/videos from an input directory, name them according to\n"
-    "a certain schema, and put them in a YYYY/mm/ folder structure in a destination\n"
-    "directory.\n"
-    "\n"
-    "The final filename will look something like this:\n"
-    "  YYYY.mm.dd_hh.mm.ss_hashcafebabe_originalname.ext\n"
-    "for example:\n"
-    "  2020.09.16-18.38.23_4487bfd46ccb74b7_DSCF4506.JPG\n"
-    "\n"
-    "Usage: ./fotografiska <source_dir> <dest_dir>\n"
-    "  source_dir: A folder containing images/videos to read from\n"
-    "  dest_dir: A folder to move the files from source_dir into, with the following structure:\n"
-    "    2021/\n"
-    "      01/\n"
-    "      02/\n"
-    "        xxxxxxx.jpg\n"
-    "        ...\n"
-    "      ...\n"
-    "    ...\n";
-  printf("%s", USAGE);
-}
-
-
 /*!
   See print_usage() for options.
 */
-int main(int argc, char **argv) {
-  if (argc < 3) {
-    print_usage();
+int main(int argc, const char **argv) {
+  char const *src_dir = NULL;
+  char const *dest_dir = NULL;
+  bool32 is_dry_run;
+
+  struct argparse_option options[] = {
+    OPT_HELP(),
+    OPT_STRING('i', "src-dir", &src_dir, "a folder containing images/videos to read from"),
+    OPT_STRING('o', "dest-dir", &dest_dir, "a folder to move the files from src-dir into"),
+    OPT_BOOLEAN('d', "dry-run", &is_dry_run, "don't move files, just print out what would be done"),
+    OPT_END(),
+  };
+
+  struct argparse argparse;
+  argparse_init(&argparse, options, USAGE_PARTS, 0);
+  argparse_describe(&argparse, USAGE_BODY, USAGE_EPILOGUE);
+  argc = argparse_parse(&argparse, argc, argv);
+
+  if (!src_dir || !dest_dir) {
+    argparse_usage(&argparse);
     return 1;
   }
-
-  char const *src_dir = argv[1];
-  char const *dest_dir = argv[2];
 
   size_t const file_buffer_size = MAX_HASHABLE_SIZE;
   char *file_buffer = (char*)malloc(file_buffer_size);
@@ -231,7 +248,7 @@ int main(int argc, char **argv) {
     if (file.name[0] == '.' || file.is_dir) {
       continue;
     }
-    move_file(&file, file_buffer, file_buffer_size, dest_dir);
+    move_file(&file, file_buffer, file_buffer_size, dest_dir, is_dry_run);
   }
 
   tinydir_close(&dir);
