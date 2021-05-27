@@ -22,7 +22,7 @@ pstr never overflows (hopefully) and never truncates strings. Most functions ret
 strings don't fit into the buffer, it returns `false` without changing anything.
 
 ```c
-pstrcat(dest, 10, "this string is way too big"); 
+pstr_cat(dest, 10, "this string is way too big"); 
 // returns false without changing `dest`
 ```
 
