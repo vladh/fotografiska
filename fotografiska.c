@@ -112,8 +112,12 @@ bool32 move_file_to_dest_dir(
   struct stat st = {};
 
   // Make sure the first part of the target directory exists (the year)
+  if (strlen(dest_dir) + 1 + strlen(file_creation_year) + 1 > MAX_PATH) {
+    printf("Your file paths are too long, so we couldn't move this file.");
+    return false;
+  }
   char year_directory[MAX_PATH];
-  snprintf(year_directory, MAX_PATH, "%s/%s", dest_dir, file_creation_year);
+  sprintf(year_directory, "%s/%s", dest_dir, file_creation_year);
   if (stat(year_directory, &st) == -1) {
     printf("Creating directory: %s\n", year_directory);
     if (mkdir(year_directory, 0700) == -1) {
@@ -123,11 +127,12 @@ bool32 move_file_to_dest_dir(
   }
 
   // Make sure the month subdirectory exists
+  if (strlen(year_directory) + 1 + strlen(file_creation_month) + 1 > MAX_PATH) {
+    printf("Your file paths are too long, so we couldn't move this file.");
+    return false;
+  }
   char month_directory[MAX_PATH];
-  snprintf(
-    month_directory, MAX_PATH,
-    "%s/%s/%s", dest_dir, file_creation_year, file_creation_month
-  );
+  sprintf(month_directory, "%s/%s", year_directory, file_creation_month);
   if (stat(month_directory, &st) == -1) {
     printf("Creating directory: %s\n", month_directory);
     if (mkdir(month_directory, 0700) == -1) {
@@ -136,11 +141,13 @@ bool32 move_file_to_dest_dir(
     }
   }
 
+  // Make the final destination path
+  if (strlen(month_directory) + 1 + strlen(file_new_name) + 1 > MAX_PATH) {
+    printf("Your file paths are too long, so we couldn't move this file.");
+    return false;
+  }
   char target_path[MAX_PATH];
-  snprintf(
-    target_path, MAX_PATH,
-    "%s/%s", month_directory, file_new_name
-  );
+  sprintf(target_path, "%s/%s", month_directory, file_new_name);
 
   // Move the file!
   if (rename(source_path, target_path) != 0) {
@@ -236,9 +243,9 @@ void sort_file_into_dest_dir(
   snprintf(
     file_new_name,
     MAX_PATH,
-    "%s_%llx_%s.%s",
+    "%s_%lx_%s.%s",
     file_creation_date,
-    (uint64)hash,
+    (unsigned long)hash,
     file_basename,
     file->extension
   );
