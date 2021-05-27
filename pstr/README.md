@@ -3,7 +3,7 @@
 This is a set of functions that allows you to more easily work with static C strings
 without worrying about safety as much. pstr has two principles:
 
-*1. If a string doesn't fit, it stops what it's doing and tells you*
+**1. If a string doesn't fit, it stops what it's doing and tells you**
 
 Functions like `strcat`, `strncat` and `strlcat` try to fit as much of the source string
 into the destination buffer as possible. This means that you either end up with safety
@@ -24,7 +24,7 @@ pstrcat(dest, 10, "this string is way too big");
 // returns false without changing `dest`
 ```
 
-*2. It's easier to work with (than `<string.h>` functions)*
+**2. It's easier to work with (than `<string.h>` functions)**
 
 Even when everything fits inside your buffer and you don't have to worry about safety,
 doing simple things such as concatenating multiple strings can be a pain in C. pstr
@@ -38,19 +38,20 @@ pstr_vcat(dest, dest_size, " Hello", " there ", name, "!", NULL);
 
 ## FAQ
 
-*I've found a safety issue with one of the functions!*
+**I've found a safety issue with one of the functions!**
 
 Issues and pull requests are welcome! :)
 
-*Why not use a dynamic string library such as [sds](https://github.com/antirez/sds)?*
+**Why not use a dynamic string library such as [sds](https://github.com/antirez/sds)?**
 
-sds is great, but it's sometimes nice to be able to work with static strings --- they're
-easy to serialize to disk, don't need a `malloc()` call, are better in embedded
-environments and so on. Plus, for a lot of simple string handling situations, you don't
-need your strings to grow to any length. It's nice to be able to work with static strings
-without dealing with awful `<string.h>` functions with `strcat`.
+sds is great, and is a better solution in many cases, but it's sometimes nice to be able
+to work with static strings --- they're easy to serialize to disk, don't need a
+`malloc()` call, are better in embedded environments and so on. Plus, for a lot of simple
+string handling situations, you don't need your strings to be able to grow to any length.
+It's nice to be able to work with static strings without dealing with awful `<string.h>`
+functions with `strcat`.
 
-*Why is it called pstr?*
+**Why is it called pstr?**
 
 I wrote it for my game engine [Peony](https://vladh.net).
 
