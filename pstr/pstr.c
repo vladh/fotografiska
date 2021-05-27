@@ -21,12 +21,13 @@
   THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
-#include <stdint.h>
 #include <assert.h>
 #include <ctype.h>
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 
 bool pstr_is_valid(char const *str, size_t const size) {
@@ -118,6 +119,41 @@ bool pstr_cat(char *dest, size_t const dest_size, char const *src) {
 
   memcpy(dest + dest_len, src, src_len);
   dest[dest_len + src_len] = '\0';
+
+  return true;
+}
+
+
+bool pstr_vcat(char *dest, size_t const dest_size, ...) {
+  size_t const dest_len = pstr_len(dest);
+  size_t free_size = dest_size - dest_len;
+  char *cursor = dest + dest_len;
+
+  va_list args;
+  va_start(args, dest_size);
+
+  char const *src;
+
+  while (true) {
+    src = va_arg(args, char const*);
+    if (!src) {
+      break;
+    }
+    size_t const src_len = pstr_len(src);
+
+    // If there's no room, return false
+    if (free_size < src_len + 1 || src_len == 0) {
+      // Restore our string to what it was before
+      dest[dest_len] = 0;
+      return false;
+    }
+
+    memcpy(cursor, src, src_len);
+    cursor += src_len;
+    free_size -= src_len;
+  }
+
+  *cursor = '\0';
 
   return true;
 }
@@ -258,7 +294,7 @@ bool pstr_from_int64(
     // Check that we have space for the string so far, the NULL terminator and a
     // potential '-' character
     if (*new_str_len > str_size - 2) {
-      *cursor = 0;
+      str[0] = 0;
       return false;
     }
 

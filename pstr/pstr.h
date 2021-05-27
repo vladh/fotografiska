@@ -21,9 +21,9 @@
   THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 
 // Information functions
@@ -92,6 +92,20 @@ bool pstr_copy(char *dest, size_t const dest_size, char const *src);
   and false is returned.
 */
 bool pstr_cat(char *dest, size_t const dest_size, char const *src);
+
+/*!
+  Tries to add strings given as varargs onto the end of `dest`.
+  The last string given should be a NULL pointer. Remember to pass this!
+  For example:
+
+  ```
+  pstr_cat(dest, dest_size, str1, str2, nullptr);
+  ```
+
+  If there is enough space, the copy proceeds and true is returned.
+  If there isn't enough space, false is returned and the string is unchanged.
+*/
+bool pstr_vcat(char *dest, size_t const dest_size, ...);
 
 /*!
   Finds `separator` in `src`, puts the part before it into `part1`,
@@ -170,8 +184,8 @@ void pstr_trim_char(char *str, char const target);
 /*!
   Puts a string reprensentation of `number` into `str`.
   Returns true if it succeeds. If the number does not fit into `str` because its
-  length is more than `str_size` characters, this function fails and returns false.
-  Please note that `str` will still have characters added to it in case of failure.
+  length is more than `str_size` characters, this function fails and returns false,
+  with `str` being set to an empty string.
 */
 bool pstr_from_int64(
   char *str, size_t const str_size, int64_t number, size_t *new_str_len

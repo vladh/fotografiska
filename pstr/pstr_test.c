@@ -280,6 +280,43 @@ static void test_pstr_cat() {
 }
 
 
+static void test_pstr_vcat() {
+  print_test_group("test_pstr_vcat()");
+  bool did_succeed;
+  size_t const dest_size = 20;
+  char dest[dest_size];
+
+  memcpy(dest, "hi\0", 3);
+  did_succeed = pstr_vcat(dest, dest_size, " there\0", NULL);
+  run_test(
+    "A single short string is concatenated successfully",
+    did_succeed && memcmp(dest, "hi there\0", 9) == 0
+  );
+
+  memcpy(dest, "hi\0", 3);
+  did_succeed = pstr_vcat(dest, dest_size, " there\0", " dear", " pal!!", NULL);
+  run_test(
+    "Multiple short strings are concatenated successfully with or without "
+    "NULL terminators",
+    did_succeed && memcmp(dest, "hi there dear pal!!\0", 20) == 0
+  );
+
+  memcpy(dest, "hi\0", 3);
+  did_succeed = pstr_vcat(dest, dest_size, "12345678901234567890", NULL);
+  run_test(
+    "A string that's too long is not concatenated and the string is unchanged",
+    !did_succeed && memcmp(dest, "hi\0", 3) == 0
+  );
+
+  memcpy(dest, "hi\0", 3);
+  did_succeed = pstr_vcat(dest, dest_size, "12345", "12345", "12345", "12345", NULL);
+  run_test(
+    "Multiple small strings that add up to too much are not concatenated",
+    !did_succeed && memcmp(dest, "hi\0", 3) == 0
+  );
+}
+
+
 static void test_pstr_split_on_first_occurrence() {
   print_test_group("test_pstr_split_on_first_occurrence()");
   bool did_succeed;
@@ -691,6 +728,7 @@ int main(int argc, char **argv) {
   test_pstr_ends_with();
   test_pstr_copy();
   test_pstr_cat();
+  test_pstr_vcat();
   test_pstr_split_on_first_occurrence();
   test_pstr_clear();
   test_pstr_slice_from();
