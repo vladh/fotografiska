@@ -1,4 +1,4 @@
-![pstr string functions](images/saihou_itodama.png | width=200)
+![pstr string functions](images/saihou_itodama.png)
 
 # pstr — a set of cautious and easy-to-use C string functions
 
