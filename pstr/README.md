@@ -38,6 +38,9 @@ pstr_vcat(dest, dest_size, " Hello", " there ", name, "!", NULL);
 
 ## Documentation
 
+pstr is very small, so I would recommend directly copying `pstr.h` and `pstr.c` into your
+project.
+
 ## FAQ
 
 **I've found a safety issue with one of the functions!**
