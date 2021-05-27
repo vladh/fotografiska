@@ -112,12 +112,14 @@ bool32 move_file_to_dest_dir(
   struct stat st = {};
 
   // Make sure the first part of the target directory exists (the year)
-  if (strlen(dest_dir) + 1 + strlen(file_creation_year) + 1 > MAX_PATH) {
-    printf("Your file paths are too long, so we couldn't move this file.");
+  char year_directory[MAX_PATH];
+  int32 year_directory_n_chars_used = snprintf(
+    year_directory, MAX_PATH, "%s/%s", dest_dir, file_creation_year
+  );
+  if (year_directory_n_chars_used >= MAX_PATH) {
+    printf("Your file paths are too long, so we couldn't move this file.\n");
     return false;
   }
-  char year_directory[MAX_PATH];
-  sprintf(year_directory, "%s/%s", dest_dir, file_creation_year);
   if (stat(year_directory, &st) == -1) {
     printf("Creating directory: %s\n", year_directory);
     if (mkdir(year_directory, 0700) == -1) {
@@ -127,12 +129,14 @@ bool32 move_file_to_dest_dir(
   }
 
   // Make sure the month subdirectory exists
-  if (strlen(year_directory) + 1 + strlen(file_creation_month) + 1 > MAX_PATH) {
-    printf("Your file paths are too long, so we couldn't move this file.");
+  char month_directory[MAX_PATH];
+  int32 month_directory_n_chars_used = snprintf(
+    month_directory, MAX_PATH, "%s/%s", year_directory, file_creation_month
+  );
+  if (month_directory_n_chars_used >= MAX_PATH) {
+    printf("Your file paths are too long, so we couldn't move this file.\n");
     return false;
   }
-  char month_directory[MAX_PATH];
-  sprintf(month_directory, "%s/%s", year_directory, file_creation_month);
   if (stat(month_directory, &st) == -1) {
     printf("Creating directory: %s\n", month_directory);
     if (mkdir(month_directory, 0700) == -1) {
@@ -142,12 +146,14 @@ bool32 move_file_to_dest_dir(
   }
 
   // Make the final destination path
-  if (strlen(month_directory) + 1 + strlen(file_new_name) + 1 > MAX_PATH) {
-    printf("Your file paths are too long, so we couldn't move this file.");
+  char target_path[MAX_PATH];
+  int32 target_path_n_chars_used = snprintf(
+    target_path, MAX_PATH, "%s/%s", month_directory, file_new_name
+  );
+  if (target_path_n_chars_used >= MAX_PATH) {
+    printf("Your file paths are too long, so we couldn't move this file.\n");
     return false;
   }
-  char target_path[MAX_PATH];
-  sprintf(target_path, "%s/%s", month_directory, file_new_name);
 
   // Move the file!
   if (rename(source_path, target_path) != 0) {
@@ -167,8 +173,7 @@ void sort_file_into_dest_dir(
   tinydir_file const *file, char *file_buffer, size_t const file_buffer_size,
   char const *dest_dir, bool32 is_dry_run
 ) {
-  uint32 const BASENAME_MAX_LENGTH = 160;
-  char file_basename[BASENAME_MAX_LENGTH];
+  char file_basename[MAX_PATH];
   char file_new_name[MAX_PATH];
   char file_creation_date[20]; // YYYY.mm.dd_HH.MM.SS0
   char file_creation_year[5]; // YYYY0
@@ -180,20 +185,13 @@ void sort_file_into_dest_dir(
   // Open file
   file_handle = fopen(file->path, "r");
   if (file_handle == NULL) {
-    printf("ERROR: Could not open file %s\n", file->path);
+    printf("Could not open file %s\n", file->path);
     goto cleanup_return;
   }
 
   // Get name without extension
-  // Limit the number of characters, because we will put this basename into a longer
-  // path later.
-  strncpy(file_basename, file->name, BASENAME_MAX_LENGTH - 1);
-  if (strlen(file_basename) < BASENAME_MAX_LENGTH - 1) {
-    // Only chop off the extension if we didn't truncate the filename
-    file_basename[strlen(file_basename) - strlen(file->extension) - 1] = 0;
-  } else {
-    file_basename[BASENAME_MAX_LENGTH - 1] = 0;
-  }
+  strncpy(file_basename, file->name, MAX_PATH);
+  file_basename[strlen(file_basename) - strlen(file->extension) - 1] = 0;
 
   // Get creation date
   ExifData const *exif_data = exif_data_new_from_file(file->path);
@@ -233,14 +231,14 @@ void sort_file_into_dest_dir(
   // Read hashable portion into file_buffer
   fseek(file_handle, 0, SEEK_SET);
   if (fread(file_buffer, 1, file_hashable_size, file_handle) < file_hashable_size) {
-    printf("ERROR: Could not read entire hashable portion of file %s\n", file->path);
+    printf("Could not read entire hashable portion of file %s\n", file->path);
     goto cleanup_fclose;
   }
 
   // Compute the hash
   XXH64_hash_t const hash = XXH64(file_buffer, file_hashable_size, 0);
 
-  snprintf(
+  int32 file_new_name_chars_used = snprintf(
     file_new_name,
     MAX_PATH,
     "%s_%lx_%s.%s",
@@ -258,6 +256,11 @@ void sort_file_into_dest_dir(
     file_creation_month,
     file_new_name
   );
+
+  if (file_new_name_chars_used >= MAX_PATH) {
+    printf("Your file paths are too long, so we couldn't move this file.\n");
+    goto cleanup_fclose;
+  }
 
   if (is_dry_run) {
     printf("(dry run, not doing anything)\n");
