@@ -1,7 +1,24 @@
 /*!
   pstr string functions
-  Vlad-Stefan Harbuz <vlad@vladh.net>
-  MIT license
+
+  Copyright 2021 Vlad-Stefan Harbuz <vlad@vladh.net>
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this
+  software and associated documentation files (the "Software"), to deal in the Software
+  without restriction, including without limitation the rights to use, copy, modify,
+  merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+  permit persons to whom the Software is furnished to do so, subject to the following
+  conditions:
+
+  The above copyright notice and this permission notice shall be included in all copies
+  or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+  INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+  PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+  HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+  CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
+  THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include <stdlib.h>
@@ -116,28 +133,34 @@ bool pstr_slice_to(char *str, size_t const end);
 bool pstr_slice(char *str, size_t const start, size_t const end);
 
 /*!
+  Remove whitespace from the beginning of `str`.
 */
 void pstr_ltrim(char *str);
 
 /*!
+  Remove whitespace from the end of `str`.
 */
 void pstr_rtrim(char *str);
 
 /*!
+  Remove whitespace from the start and end of `str`.
 */
 void pstr_trim(char *str);
 
 /*!
+  Remove instances of `target` from the beginning of `str`.
 */
-void pstr_ltrim_char(char *str, char const *target);
+void pstr_ltrim_char(char *str, char const target);
 
 /*!
+  Remove instances of `target` from the end of `str`.
 */
-void pstr_rtrim_char(char *str, char const *target);
+void pstr_rtrim_char(char *str, char const target);
 
 /*!
+  Remove instances of `target` from the beginning and end of `str`.
 */
-void pstr_trim_char(char *str, char const *target);
+void pstr_trim_char(char *str, char const target);
 
 
 // Creation functions
@@ -145,5 +168,11 @@ void pstr_trim_char(char *str, char const *target);
 // ------------------------
 
 /*!
+  Puts a string reprensentation of `number` into `str`.
+  Returns true if it succeeds. If the number does not fit into `str` because its
+  length is more than `str_size` characters, this function fails and returns false.
+  Please note that `str` will still have characters added to it in case of failure.
 */
-void pstr_from_int64(char *str, uint64_t const n);
+bool pstr_from_int64(
+  char *str, size_t const str_size, int64_t number, size_t *new_str_len
+);

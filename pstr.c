@@ -1,7 +1,24 @@
 /*!
   pstr string functions
-  Vlad-Stefan Harbuz <vlad@vladh.net>
-  MIT license
+
+  Copyright 2021 Vlad-Stefan Harbuz <vlad@vladh.net>
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this
+  software and associated documentation files (the "Software"), to deal in the Software
+  without restriction, including without limitation the rights to use, copy, modify,
+  merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+  permit persons to whom the Software is furnished to do so, subject to the following
+  conditions:
+
+  The above copyright notice and this permission notice shall be included in all copies
+  or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+  INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+  PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+  HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+  CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
+  THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include <stdlib.h>
@@ -9,6 +26,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <assert.h>
+#include <ctype.h>
 
 
 bool pstr_is_valid(char const *str, size_t const size) {
@@ -175,40 +193,94 @@ bool pstr_slice(char *str, size_t const start, size_t const end) {
 }
 
 
-/* Helper for sdscatlonglong() doing the actual number -> string
- * conversion. 's' must point to a string with room for at least
- * SDS_LLSTR_SIZE bytes.
- *
- * The function returns the length of the null-terminated string
- * representation stored at 's'. */
-#define SDS_LLSTR_SIZE 21
-int sdsll2str(char *s, long long value) {
-    char *p, aux;
-    unsigned long long v;
-    size_t l;
+void pstr_ltrim(char *str) {
+  size_t n_spaces = 0;
+  while (isspace(str[n_spaces])) {
+    n_spaces++;
+  }
+  pstr_slice_from(str, n_spaces);
+}
 
-    /* Generate the string representation, this method produces
-     * an reversed string. */
-    v = (value < 0) ? -value : value;
-    p = s;
-    do {
-        *p++ = '0'+(v%10);
-        v /= 10;
-    } while(v);
-    if (value < 0) *p++ = '-';
 
-    /* Compute length and add null term. */
-    l = p-s;
-    *p = '\0';
+void pstr_rtrim(char *str) {
+  size_t str_len = pstr_len(str);
+  size_t n_spaces = 0;
+  while (isspace(str[str_len - n_spaces - 1])) {
+    n_spaces++;
+  }
+  pstr_slice_to(str, str_len - n_spaces);
+}
 
-    /* Reverse the string. */
-    p--;
-    while(s < p) {
-        aux = *s;
-        *s = *p;
-        *p = aux;
-        s++;
-        p--;
+
+void pstr_trim(char *str) {
+  pstr_ltrim(str);
+  pstr_rtrim(str);
+}
+
+
+void pstr_ltrim_char(char *str, char const target) {
+  size_t n_matches = 0;
+  while (str[n_matches] == target) {
+    n_matches++;
+  }
+  pstr_slice_from(str, n_matches);
+}
+
+
+void pstr_rtrim_char(char *str, char const target) {
+  size_t str_len = pstr_len(str);
+  size_t n_matches = 0;
+  while (str[str_len - n_matches - 1] == target) {
+    n_matches++;
+  }
+  pstr_slice_to(str, str_len - n_matches);
+}
+
+
+void pstr_trim_char(char *str, char const target) {
+  pstr_ltrim_char(str, target);
+  pstr_rtrim_char(str, target);
+}
+
+
+bool pstr_from_int64(
+  char *str, size_t const str_size, int64_t number, size_t *new_str_len
+) {
+  char *cursor = str;
+  *new_str_len = 0;
+  uint64_t number_abs = (number < 0) ? -number : number;
+
+  // Make a backwards string, since that's easier to produce
+  do {
+    *cursor++ = '0' + (number_abs % 10);
+    (*new_str_len)++;
+
+    // Check that we have space for the string so far, the NULL terminator and a
+    // potential '-' character
+    if (*new_str_len > str_size - 2) {
+      *cursor = 0;
+      return false;
     }
-    return l;
+
+    number_abs /= 10;
+  } while(number_abs > 0);
+
+  if (number < 0) {
+    *cursor++ = '-';
+  }
+
+  *cursor = '\0';
+
+  // Reverse our string so it's the right way around again
+  char swapped_char;
+  cursor--;
+  while(str < cursor) {
+    swapped_char = *str;
+    *str = *cursor;
+    *cursor = swapped_char;
+    str++;
+    cursor--;
+  }
+
+  return true;
 }
