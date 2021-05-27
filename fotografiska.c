@@ -46,7 +46,7 @@ char const *USAGE_BODY = ""
   "Options:";
 char const *USAGE_EPILOGUE = ""
   "\n"
-  "The destination directory should follow this directory structure:\n"
+  "The destination directory will follow this directory structure:\n"
   "\n"
   "    2021/\n"
   "      01/\n"
@@ -103,15 +103,66 @@ void split_creation_date(
 
 
 /*!
-  Puts a file into its correct place in the output directory.
+  Moves the actual file to the proper place once we've found its new name.
 */
-void move_file(
+bool32 move_file_to_dest_dir(
+  char const *source_path, char const *dest_dir, char const *file_new_name,
+  char const *file_creation_year, char const *file_creation_month
+) {
+  struct stat st = {};
+
+  // Make sure the first part of the target directory exists (the year)
+  char year_directory[MAX_PATH];
+  snprintf(year_directory, MAX_PATH, "%s/%s", dest_dir, file_creation_year);
+  if (stat(year_directory, &st) == -1) {
+    printf("Creating directory: %s\n", year_directory);
+    if (mkdir(year_directory, 0700) == -1) {
+      printf("Could not create directory! Please check you have permissions.\n");
+      return false;
+    }
+  }
+
+  // Make sure the month subdirectory exists
+  char month_directory[MAX_PATH];
+  snprintf(
+    month_directory, MAX_PATH,
+    "%s/%s/%s", dest_dir, file_creation_year, file_creation_month
+  );
+  if (stat(month_directory, &st) == -1) {
+    printf("Creating directory: %s\n", month_directory);
+    if (mkdir(month_directory, 0700) == -1) {
+      printf("Could not create directory! Please check you have permissions.\n");
+      return false;
+    }
+  }
+
+  char target_path[MAX_PATH];
+  snprintf(
+    target_path, MAX_PATH,
+    "%s/%s", month_directory, file_new_name
+  );
+
+  // Move the file!
+  if (rename(source_path, target_path) != 0) {
+    printf("Could not move the file to its new home! Please check you have permissions.\n");
+    return false;
+  }
+
+  return true;
+}
+
+
+/*!
+  Figures out the new filename and location for a file in the destination dir,
+  then puts it there.
+*/
+void sort_file_into_dest_dir(
   tinydir_file const *file, char *file_buffer, size_t const file_buffer_size,
   char const *dest_dir, bool32 is_dry_run
 ) {
   uint32 const BASENAME_MAX_LENGTH = 160;
   char file_basename[BASENAME_MAX_LENGTH];
-  char file_new_path[MAX_PATH];
+  char file_new_name[MAX_PATH];
   char file_creation_date[20]; // YYYY.mm.dd_HH.MM.SS0
   char file_creation_year[5]; // YYYY0
   char file_creation_month[3]; // mm0
@@ -183,22 +234,33 @@ void move_file(
   XXH64_hash_t const hash = XXH64(file_buffer, file_hashable_size, 0);
 
   snprintf(
-    file_new_path,
+    file_new_name,
     MAX_PATH,
-    "%s/%s/%s/%s_%llx_%s.%s",
-    dest_dir,
-    file_creation_year,
-    file_creation_month,
+    "%s_%llx_%s.%s",
     file_creation_date,
     (uint64)hash,
     file_basename,
     file->extension
   );
 
+  printf(
+    "%s -> %s/%s/%s/%s\n",
+    file->path,
+    dest_dir,
+    file_creation_year,
+    file_creation_month,
+    file_new_name
+  );
+
   if (is_dry_run) {
-    printf("%s -> %s\n", file->path, file_new_path);
+    printf("(dry run, not doing anything)\n");
   } else {
-    printf("???????? %s -> %s\n", file->path, file_new_path);
+    bool32 could_move = move_file_to_dest_dir(
+      file->path, dest_dir, file_new_name, file_creation_year, file_creation_month
+    );
+    if (!could_move) {
+      goto cleanup_fclose;
+    }
   }
 
 cleanup_fclose:
@@ -248,7 +310,7 @@ int main(int argc, const char **argv) {
     if (file.name[0] == '.' || file.is_dir) {
       continue;
     }
-    move_file(&file, file_buffer, file_buffer_size, dest_dir, is_dry_run);
+    sort_file_into_dest_dir(&file, file_buffer, file_buffer_size, dest_dir, is_dry_run);
   }
 
   tinydir_close(&dir);
