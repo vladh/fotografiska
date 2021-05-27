@@ -141,6 +141,40 @@ void pstr_clear(char *str) {
 }
 
 
+bool pstr_slice_from(char *str, size_t const start) {
+  size_t const str_len = pstr_len(str);
+  if (start >= str_len) {
+    return false;
+  }
+  uint32_t idx = 0;
+  char *cursor = &str[start];
+  do {
+    str[idx++] = *cursor;
+    cursor++;
+  } while (*cursor != 0);
+  str[idx++] = 0;
+  return true;
+}
+
+
+bool pstr_slice_to(char *str, size_t const end) {
+  size_t const str_len = pstr_len(str);
+  if (end >= str_len) {
+    return false;
+  }
+  str[end] = 0;
+  return true;
+}
+
+
+bool pstr_slice(char *str, size_t const start, size_t const end) {
+  if (start >= end) {
+    return false;
+  }
+  return pstr_slice_to(str, end) && pstr_slice_from(str, start);
+}
+
+
 /* Helper for sdscatlonglong() doing the actual number -> string
  * conversion. 's' must point to a string with room for at least
  * SDS_LLSTR_SIZE bytes.

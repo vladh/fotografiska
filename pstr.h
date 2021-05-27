@@ -95,16 +95,25 @@ bool pstr_split_on_first_occurrence(
 void pstr_clear(char *str);
 
 /*!
+  Replaces `str` with the portion of the string starting from index `start`, discarding
+  the old leading characters. Returns true if it succeeded.
+  Fails if start > strlen(str), in which case false is returned.
 */
-void pstr_slice_from(char *str, uint32_t const start);
+bool pstr_slice_from(char *str, size_t const start);
 
 /*!
+  Cuts `str` off at index `end`, adding a NULL terminator and discarding the old end.
+  Returns true if it succeeded. Fails if end > strlen(str), in which case false is
+  returned.
 */
-void pstr_slice_to(char *str, uint32_t const end);
+bool pstr_slice_to(char *str, size_t const end);
 
 /*!
+  Replaces `str with its substring from index `start` to index `end`.
+  Returns true if it succeeded. Fails if start or end > strlen(str), in which case false
+  is returned.
 */
-void pstr_slice(char *str, uint32_t const start, uint32_t const end);
+bool pstr_slice(char *str, size_t const start, size_t const end);
 
 /*!
 */

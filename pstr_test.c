@@ -396,6 +396,91 @@ static void test_pstr_clear() {
 }
 
 
+static void test_pstr_slice_from() {
+  print_test_group("test_pstr_slice_from()");
+  bool did_succeed;
+  char str[9];
+
+  memcpy(str, ",,hello!\0", 9);
+  did_succeed = pstr_slice_from(str, 2);
+  print_test(
+    "A slice is correctly performed",
+    did_succeed && memcmp(str, "hello!\0", 7) == 0
+  );
+
+  memcpy(str, ",,hello!\0", 9);
+  did_succeed = pstr_slice_from(str, 7);
+  print_test(
+    "The last character is returned when slicing at the last index",
+    did_succeed && str[0] == '!'
+  );
+
+  memcpy(str, ",,hello!\0", 9);
+  did_succeed = pstr_slice_from(str, 8);
+  print_test(
+    "A slice is not performed if the position is past the end of the string",
+    !did_succeed && memcmp(str, ",,hello!\0", 9) == 0
+  );
+}
+
+
+static void test_pstr_slice_to() {
+  print_test_group("test_pstr_slice_to()");
+  bool did_succeed;
+  char str[6];
+
+  memcpy(str, "hello\0", 6);
+  did_succeed = pstr_slice_to(str, 2);
+  print_test(
+    "A slice is correctly performed",
+    did_succeed && memcmp(str, "he\0", 3) == 0
+  );
+
+  memcpy(str, "hello\0", 6);
+  did_succeed = pstr_slice_to(str, 4);
+  print_test(
+    "The last character can be sliced off",
+    did_succeed && memcmp(str, "hell\0", 5) == 0
+  );
+
+  memcpy(str, "hello\0", 6);
+  did_succeed = pstr_slice_to(str, 5);
+  print_test(
+    "A slice is not performed if the position is past the end of the string",
+    !did_succeed && memcmp(str, "hello\0", 6) == 0
+  );
+}
+
+
+static void test_pstr_slice() {
+  print_test_group("test_pstr_slice()");
+  bool did_succeed;
+  char str[9];
+
+  memcpy(str, "hi there\0", 9);
+  did_succeed = pstr_slice(str, 1, 7);
+  print_test(
+    "A start-end slice is correctly performed",
+    did_succeed && memcmp(str, "i ther\0", 7) == 0
+  );
+
+  memcpy(str, "hi there\0", 9);
+  did_succeed = pstr_slice(str, 1, 8);
+  print_test(
+    "A slice is not performed if the end is too far",
+    !did_succeed && memcmp(str, "hi there\0", 9) == 0
+  );
+
+
+  memcpy(str, "hi there\0", 9);
+  did_succeed = pstr_slice(str, 1, 1);
+  print_test(
+    "A slice is not performed if start == end",
+    !did_succeed && memcmp(str, "hi there\0", 9) == 0
+  );
+}
+
+
 int main(int argc, char **argv) {
   test_pstr_is_valid();
   test_pstr_len();
@@ -409,4 +494,7 @@ int main(int argc, char **argv) {
   test_pstr_cat();
   test_pstr_split_on_first_occurrence();
   test_pstr_clear();
+  test_pstr_slice_from();
+  test_pstr_slice_to();
+  test_pstr_slice();
 }
