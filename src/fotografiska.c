@@ -6,24 +6,22 @@
 #include <time.h>
 #include <string.h>
 
-#define malloc(size) printf("malloc!") && malloc(size);
-
 // External libraries
 #include <libexif/exif-data.h>
-#include "external/tinydir.h"
-#include "external/xxhash.h"
-#include "external/argparse.h"
+#include "../external/tinydir.h"
+#include "../external/xxhash.h"
+#include "../external/argparse.h"
 
 // Our headers
 #include "types.h"
 #include "intrinsics.h"
 #include "constants.h"
-#include "pstr.h"
+#include "../pstr/pstr.h"
 
 // Unity build for simplicity
-#include "external/xxhash.c"
-#include "external/argparse.c"
-#include "pstr.c"
+#include "../external/xxhash.c"
+#include "../external/argparse.c"
+#include "../pstr/pstr.c"
 
 
 #if defined(__APPLE__) || defined(__NetBSD__)
