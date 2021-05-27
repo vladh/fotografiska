@@ -10,7 +10,7 @@ into the destination buffer as possible. This means that you either end up with 
 issues like buffer overflows, or in the best case scenario, truncated strings, which can
 also present problems.
 
-```
+```c
 strlcat(dest, "this string is way too big", 10); 
 // concatenated `dest` is truncated, and you have to do an extra check to detect this
 ```
@@ -19,7 +19,7 @@ pstr never overflows (hopefully) and never truncates strings. Most functions ret
 `bool` to represent whether the operation succeeded. For example, in `pstr_cat`, if the
 strings don't fit into the buffer, it returns `false` without changing anything.
 
-```
+```c
 pstrcat(dest, 10, "this string is way too big"); 
 // returns false without changing `dest`
 ```
@@ -30,7 +30,7 @@ Even when everything fits inside your buffer and you don't have to worry about s
 doing simple things such as concatenating multiple strings can be a pain in C. pstr
 functions make this a little bit simpler. For example:
 
-```
+```c
 pstr_vcat(dest, dest_size, " Hello", " there ", name, "!", NULL);
 ```
 
