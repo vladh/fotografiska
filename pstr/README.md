@@ -1,6 +1,6 @@
 # pstr — a set of cautious and easy-to-use C string functions
 
-![pstr string functions](images/saihou_itodama.png)
+![pstr string functions](images/saihou_itodama.png | width 200)
 
 This is a set of functions that allows you to more easily work with static C strings
 without worrying about safety as much. pstr has two principles:
