@@ -6,6 +6,8 @@
 #include <time.h>
 #include <string.h>
 
+#define malloc(size) printf("malloc!") && malloc(size);
+
 // External libraries
 #include <libexif/exif-data.h>
 #include "external/tinydir.h"
@@ -14,10 +16,14 @@
 
 // Our headers
 #include "types.h"
+#include "intrinsics.h"
+#include "constants.h"
+#include "pstr.h"
 
 // Unity build for simplicity
 #include "external/xxhash.c"
 #include "external/argparse.c"
+#include "pstr.c"
 
 
 #if defined(__APPLE__) || defined(__NetBSD__)
@@ -60,7 +66,7 @@ char const *USAGE_EPILOGUE = ""
 /*!
   Turn a date from YYYY:mm:dd HH:MM:SS to YYYY.mm.dd_HH.MM.SS
 */
-void format_exif_date(char *date) {
+static void format_exif_date(char *date) {
   size_t const len = strlen(date);
   for (uint32 idx = 0; idx < len; idx++) {
     if (date[idx] == ':') {
@@ -75,7 +81,7 @@ void format_exif_date(char *date) {
 /*!
   Returns the value of an EXIF `tag` in the buffer `buf`.
 */
-bool32 get_exif_tag(
+static bool32 get_exif_tag(
   ExifData const *d, ExifIfd const ifd, ExifTag const tag,
   char *buf, size_t const buf_size
 ) {
@@ -92,7 +98,7 @@ bool32 get_exif_tag(
   Parses a YYYY.mm.dd_HH.MM.SS Date to extract the year into `file_creation_year`
   and the month into `file_creation_month`.
 */
-void split_creation_date(
+static void split_creation_date(
   char const *file_creation_date, char *file_creation_year, char *file_creation_month
 ) {
   strncpy(file_creation_year, file_creation_date, 4);
@@ -105,7 +111,7 @@ void split_creation_date(
 /*!
   Moves the actual file to the proper place once we've found its new name.
 */
-bool32 move_file_to_dest_dir(
+static bool32 move_file_to_dest_dir(
   char const *source_path, char const *dest_dir, char const *file_new_name,
   char const *file_creation_year, char const *file_creation_month
 ) {
@@ -169,7 +175,7 @@ bool32 move_file_to_dest_dir(
   Figures out the new filename and location for a file in the destination dir,
   then puts it there.
 */
-void sort_file_into_dest_dir(
+static void sort_file_into_dest_dir(
   tinydir_file const *file, char *file_buffer, size_t const file_buffer_size,
   char const *dest_dir, bool32 is_dry_run
 ) {

@@ -1,12 +1,6 @@
 #pragma once
 
-#if !defined(MAX_PATH)
-#if defined(PATH_MAX)
-#define MAX_PATH PATH_MAX
-#else
-#define MAX_PATH 260
-#endif
-#endif
+#include <stdint.h>
 
 typedef int8_t int8;
 typedef int16_t int16;
@@ -39,9 +33,3 @@ typedef float real32;
 typedef double real64;
 typedef real32 f32;
 typedef real64 f64;
-
-#define KB_TO_B(Value) ((Value) * 1024LL)
-#define MB_TO_B(Value) (KB_TO_B(Value) * 1024LL)
-#define GB_TO_B(Value) (MB_TO_B(Value) * 1024LL)
-#define TB_TO_B(Value) (GB_TO_B(Value) * 1024LL)
-
