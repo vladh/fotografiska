@@ -1,5 +1,7 @@
 # pstr — a set of cautious and easy-to-use C string functions
 
+![pstr string functions](images/saihou_itodama.png)
+
 This is a set of functions that allows you to more easily work with static C strings
 without worrying about safety as much. pstr has two principles:
 
@@ -57,6 +59,7 @@ I wrote it for my game engine [Peony](https://vladh.net).
 
 ## License
 
+```
 pstr string functions
 
 Copyright 2021 Vlad-Stefan Harbuz <vlad@vladh.net>
@@ -77,3 +80,6 @@ PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIG
 HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
 CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
 THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+```
+
+Icon by [irasutoya](https://www.irasutoya.com)
