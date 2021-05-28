@@ -1,7 +1,7 @@
-.PHONY: all run
+.PHONY: unix run
 
-all:
+unix:
 	gcc fotografiska.c -o bin/fotografiska -lexif -g -Wall -Wno-format-overflow -Wno-unused-variable
 
-run: all
-	./bin/fotografiska
+windows:
+	gcc fotografiska.c -o bin/fotografiska -lexif-12 -g -Wall -Wno-format-overflow -Wno-unused-variable

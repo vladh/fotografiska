@@ -354,6 +354,8 @@ int main(int argc, const char **argv) {
   size_t const file_buffer_size = MAX_HASHABLE_SIZE;
   char *file_buffer = (char*)malloc(file_buffer_size);
 
+  printf("Reading files from %s\n", src_dir);
+  printf("This can sometimes take a moment\n");
   tinydir_dir dir;
   tinydir_open_sorted(&dir, src_dir);
   printf("%s: %zu files\n", src_dir, dir.n_files);
