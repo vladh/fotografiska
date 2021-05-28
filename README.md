@@ -1,3 +1,5 @@
+![pstr string functions](images/character_bouhan_camera_sm.png)
+
 # fotografiska
 
 fotografiska organises your photos!
