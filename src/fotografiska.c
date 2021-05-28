@@ -16,12 +16,12 @@
 #include "types.h"
 #include "intrinsics.h"
 #include "constants.h"
-#include "../pstr/pstr.h"
+#include "../external/pstr.h"
 
 // Unity build for simplicity
 #include "../external/xxhash.c"
 #include "../external/argparse.c"
-#include "../pstr/pstr.c"
+#include "../external/pstr.c"
 
 
 #if defined(__APPLE__) || defined(__NetBSD__)
