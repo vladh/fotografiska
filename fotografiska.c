@@ -1,37 +1,49 @@
 // C lib headers
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
-#include <assert.h>
-#include <time.h>
 #include <string.h>
+#include <time.h>
 
 // External libraries
 #include <libexif/exif-data.h>
-#include "../external/tinydir.h"
-#include "../external/xxhash.h"
-#include "../external/argparse.h"
+#include "external/tinydir.h"
+#include "external/xxhash.h"
+#include "external/argparse.h"
 
 // Our headers
-#include "types.h"
-#include "intrinsics.h"
-#include "constants.h"
-#include "../external/pstr.h"
+#include "external/pstr.h"
 
 // Unity build for simplicity
-#include "../external/xxhash.c"
-#include "../external/argparse.c"
-#include "../external/pstr.c"
+#include "external/xxhash.c"
+#include "external/argparse.c"
+#include "external/pstr.c"
 
 
+// Some defines we're going to need
 #if defined(__APPLE__) || defined(__NetBSD__)
 #define st_atim st_atimespec
 #define st_ctim st_ctimespec
 #define st_mtim st_mtimespec
 #endif
 
+#if !defined(MAX_PATH)
+#if defined(PATH_MAX)
+#define MAX_PATH PATH_MAX
+#else
+#define MAX_PATH 260
+#endif
+#endif
 
-uint32 const MAX_HASHABLE_SIZE = MB_TO_B(10);
+#define KB_TO_B(Value) ((Value) * 1024LL)
+#define MB_TO_B(Value) (KB_TO_B(Value) * 1024LL)
+#define GB_TO_B(Value) (MB_TO_B(Value) * 1024LL)
+#define TB_TO_B(Value) (GB_TO_B(Value) * 1024LL)
+
+
+uint32_t const MAX_HASHABLE_SIZE = MB_TO_B(10);
 char const * const USAGE_PARTS[] = {"fotografiska [options]", NULL};
 char const *USAGE_BODY = ""
   "\n"
@@ -62,11 +74,11 @@ char const *USAGE_EPILOGUE = ""
 
 
 /*!
-  Turn a date from YYYY:mm:dd HH:MM:SS to YYYY.mm.dd_HH.MM.SS
+  Turns a date from "YYYY:mm:dd HH:MM:SS" to "YYYY.mm.dd_HH.MM.SS".
 */
 static void format_exif_date(char *date) {
   size_t const len = strlen(date);
-  for (uint32 idx = 0; idx < len; idx++) {
+  for (uint32_t idx = 0; idx < len; idx++) {
     if (date[idx] == ':') {
       date[idx] = '.';
     } else if (date[idx] == ' ') {
@@ -79,7 +91,7 @@ static void format_exif_date(char *date) {
 /*!
   Returns the value of an EXIF `tag` in the buffer `buf`.
 */
-static bool32 get_exif_tag(
+static bool get_exif_tag(
   ExifData const *d, ExifIfd const ifd, ExifTag const tag,
   char *buf, size_t const buf_size
 ) {
@@ -109,7 +121,7 @@ static void split_creation_date(
 /*!
   Moves the actual file to the proper place once we've found its new name.
 */
-static bool32 move_file_to_dest_dir(
+static bool move_file_to_dest_dir(
   char const *source_path, char const *dest_dir, char const *file_new_name,
   char const *file_creation_year, char const *file_creation_month
 ) {
@@ -117,7 +129,7 @@ static bool32 move_file_to_dest_dir(
 
   // Make sure the first part of the target directory exists (the year)
   char year_directory[MAX_PATH];
-  int32 year_directory_n_chars_used = snprintf(
+  int32_t year_directory_n_chars_used = snprintf(
     year_directory, MAX_PATH, "%s/%s", dest_dir, file_creation_year
   );
   if (year_directory_n_chars_used >= MAX_PATH) {
@@ -134,7 +146,7 @@ static bool32 move_file_to_dest_dir(
 
   // Make sure the month subdirectory exists
   char month_directory[MAX_PATH];
-  int32 month_directory_n_chars_used = snprintf(
+  int32_t month_directory_n_chars_used = snprintf(
     month_directory, MAX_PATH, "%s/%s", year_directory, file_creation_month
   );
   if (month_directory_n_chars_used >= MAX_PATH) {
@@ -151,7 +163,7 @@ static bool32 move_file_to_dest_dir(
 
   // Make the final destination path
   char target_path[MAX_PATH];
-  int32 target_path_n_chars_used = snprintf(
+  int32_t target_path_n_chars_used = snprintf(
     target_path, MAX_PATH, "%s/%s", month_directory, file_new_name
   );
   if (target_path_n_chars_used >= MAX_PATH) {
@@ -175,7 +187,7 @@ static bool32 move_file_to_dest_dir(
 */
 static void sort_file_into_dest_dir(
   tinydir_file const *file, char *file_buffer, size_t const file_buffer_size,
-  char const *dest_dir, bool32 is_dry_run
+  char const *dest_dir, bool is_dry_run
 ) {
   char file_basename[MAX_PATH];
   char file_new_name[MAX_PATH];
@@ -199,7 +211,7 @@ static void sort_file_into_dest_dir(
 
   // Get creation date
   ExifData const *exif_data = exif_data_new_from_file(file->path);
-  bool32 could_get_exif = false;
+  bool could_get_exif = false;
 
   if (exif_data) {
     could_get_exif = get_exif_tag(
@@ -242,7 +254,7 @@ static void sort_file_into_dest_dir(
   // Compute the hash
   XXH64_hash_t const hash = XXH64(file_buffer, file_hashable_size, 0);
 
-  int32 file_new_name_chars_used = snprintf(
+  int32_t file_new_name_chars_used = snprintf(
     file_new_name,
     MAX_PATH,
     "%s_%lx_%s.%s",
@@ -269,7 +281,7 @@ static void sort_file_into_dest_dir(
   if (is_dry_run) {
     printf("(dry run, not doing anything)\n");
   } else {
-    bool32 could_move = move_file_to_dest_dir(
+    bool could_move = move_file_to_dest_dir(
       file->path, dest_dir, file_new_name, file_creation_year, file_creation_month
     );
     if (!could_move) {
@@ -290,7 +302,7 @@ cleanup_return:
 int main(int argc, const char **argv) {
   char const *src_dir = NULL;
   char const *dest_dir = NULL;
-  bool32 is_dry_run;
+  bool is_dry_run;
 
   struct argparse_option options[] = {
     OPT_HELP(),
@@ -318,7 +330,7 @@ int main(int argc, const char **argv) {
   printf("%s: %zu files\n", src_dir, dir.n_files);
 
   // Go through over every file in the directory, and try to put it in the right place
-  for (uint32 idx = 0; idx < dir.n_files; idx++) {
+  for (uint32_t idx = 0; idx < dir.n_files; idx++) {
     tinydir_file file;
     tinydir_readfile_n(&dir, &file, idx);
     if (file.name[0] == '.' || file.is_dir) {
