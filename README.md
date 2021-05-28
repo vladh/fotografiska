@@ -4,6 +4,10 @@
 
 fotografiska organises your photos!
 
+**Note:** Always make a backup of your photos/videos before using fotografiska.
+It's been reasonably tested, but you probably don't want to lose your photos, so copy
+them to a separate folder first just to be safe.
+
 ## dependencies
 
 * [libexif](https://github.com/libexif/libexif)

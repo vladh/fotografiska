@@ -130,13 +130,13 @@ static bool move_file_to_dest_dir(
   if (
     !pstr_vcat(year_directory, MAX_PATH, dest_dir, "/", file_creation_year, NULL)
   ) {
-    printf("Your file paths are too long, so we couldn't move this file.\n");
+    printf("error | Your file paths are too long, so we couldn't move this file.\n");
     return false;
   }
   if (stat(year_directory, &st) == -1) {
-    printf("Creating directory: %s\n", year_directory);
+    printf("info  | Creating directory: %s\n", year_directory);
     if (mkdir(year_directory, 0700) == -1) {
-      printf("Could not create directory! Please check you have permissions.\n");
+      printf("ERROR: Could not create directory! Please check you have permissions.\n");
       return false;
     }
   }
@@ -146,13 +146,13 @@ static bool move_file_to_dest_dir(
   if (
     !pstr_vcat(month_directory, MAX_PATH, year_directory, "/", file_creation_month, NULL)
   ) {
-    printf("Your file paths are too long, so we couldn't move this file.\n");
+    printf("error | Your file paths are too long, so we couldn't move this file.\n");
     return false;
   }
   if (stat(month_directory, &st) == -1) {
-    printf("Creating directory: %s\n", month_directory);
+    printf("info  | Creating directory: %s\n", month_directory);
     if (mkdir(month_directory, 0700) == -1) {
-      printf("Could not create directory! Please check you have permissions.\n");
+      printf("error | Could not create directory! Please check you have permissions.\n");
       return false;
     }
   }
@@ -162,13 +162,21 @@ static bool move_file_to_dest_dir(
   if (
     !pstr_vcat(target_path, MAX_PATH, month_directory, "/", file_new_name, NULL)
   ) {
-    printf("Your file paths are too long, so we couldn't move this file.\n");
+    printf("error | Your file paths are too long, so we couldn't move this file.\n");
+    return false;
+  }
+
+  // Check if the file already exists
+  if (stat(target_path, &st) == 0) {
+    printf("info  | %s already exists, so we're not going to do anything.\n", target_path);
     return false;
   }
 
   // Move the file!
   if (rename(source_path, target_path) != 0) {
-    printf("Could not move the file to its new home! Please check you have permissions.\n");
+    printf(
+      "error | Could not move the file to its new home! Please check you have permissions.\n"
+    );
     return false;
   }
 
@@ -196,7 +204,7 @@ static void sort_file_into_dest_dir(
   // Open file
   file_handle = fopen(file->path, "r");
   if (file_handle == NULL) {
-    printf("Could not open file %s\n", file->path);
+    printf("error | Could not open file %s\n", file->path);
     goto cleanup_return;
   }
 
@@ -243,26 +251,26 @@ static void sort_file_into_dest_dir(
   // Read hashable portion into file_buffer
   fseek(file_handle, 0, SEEK_SET);
   if (fread(file_buffer, 1, file_hashable_size, file_handle) < file_hashable_size) {
-    printf("Could not read entire hashable portion of file %s\n", file->path);
+    printf("error | Could not read entire hashable portion of file %s\n", file->path);
     goto cleanup_fclose;
   }
 
   // Compute the hash
   XXH64_hash_t const hash = XXH64(file_buffer, file_hashable_size, 0);
-  char hash_string[32];
+  char hash_string[32] = {};
   // TODO: Add a function for this to pstr
-  snprintf(hash_string, 32, "%lx", (long unsigned)hash_string);
+  snprintf(hash_string, 32, "%llx", (long long unsigned)hash);
 
   if (!pstr_vcat(
     file_new_name, MAX_PATH,
     file_creation_date, "_", hash_string, "_", file_basename, ".", file->extension, NULL
   )) {
-    printf("Your file paths are too long, so we couldn't move this file.\n");
+    printf("error | Your file paths are too long, so we couldn't move this file.\n");
     goto cleanup_fclose;
   }
 
   printf(
-    "%s -> %s/%s/%s/%s\n",
+    "info  | %s -> %s/%s/%s/%s\n",
     file->path,
     dest_dir,
     file_creation_year,
@@ -271,7 +279,7 @@ static void sort_file_into_dest_dir(
   );
 
   if (is_dry_run) {
-    printf("(dry run, not doing anything)\n");
+    printf("info  | (dry run, not doing anything)\n");
   } else {
     bool could_move = move_file_to_dest_dir(
       file->path, dest_dir, file_new_name, file_creation_year, file_creation_month
@@ -293,8 +301,9 @@ cleanup_return:
   See top of the file for arguments.
 */
 int main(int argc, const char **argv) {
+  struct stat st;
   char const *src_dir = NULL;
-  char const *dest_dir = NULL;
+  char *dest_dir = NULL;
   bool is_dry_run;
 
   struct argparse_option options[] = {
@@ -312,6 +321,18 @@ int main(int argc, const char **argv) {
 
   if (!src_dir || !dest_dir) {
     argparse_usage(&argparse);
+    return 1;
+  }
+
+  pstr_rtrim_char(dest_dir, '/');
+
+  if (stat(src_dir, &st) != 0) {
+    printf("Source directory does not exist.\n");
+    return 1;
+  }
+
+  if (stat(dest_dir, &st) != 0) {
+    printf("Destination directory does not exist.\n");
     return 1;
   }
 
