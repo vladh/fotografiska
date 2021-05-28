@@ -43,9 +43,9 @@
 #define TB_TO_B(Value) (GB_TO_B(Value) * 1024LL)
 
 
-uint32_t const MAX_HASHABLE_SIZE = MB_TO_B(10);
-char const * const USAGE_PARTS[] = {"fotografiska [options]", NULL};
-char const *USAGE_BODY = ""
+static uint32_t const MAX_HASHABLE_SIZE = MB_TO_B(10);
+static char const * const USAGE_PARTS[] = {"fotografiska [options]", NULL};
+static char const * const USAGE_BODY = ""
   "\n"
   "fotografiska\n"
   "------------\n"
@@ -60,7 +60,7 @@ char const *USAGE_BODY = ""
   "  2020.09.16-18.38.23_4487bfd46ccb74b7_DSCF4506.JPG\n"
   "\n"
   "Options:";
-char const *USAGE_EPILOGUE = ""
+static char const * const USAGE_EPILOGUE = ""
   "\n"
   "The destination directory will follow this directory structure:\n"
   "\n"
