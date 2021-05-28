@@ -1,4 +1,4 @@
-![pstr string functions](images/character_bouhan_camera_sm.png)
+![pstr string functions](images/character_bouhan_camera_sm1.png)
 
 # fotografiska
 
