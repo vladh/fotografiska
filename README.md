@@ -79,6 +79,12 @@ Do a dry run first to confirm that everything looks ok:
 ./fotografiska --src-dir my_photos/ --out-dir organised_photos/ --dry-run
 ```
 
+## Roadmap
+
+* Add precompiled builds (in particular for Windows)
+* Move away from libexif and towards something that (1) is more lightweight
+  and (2) supports HEIC
+
 ## License
 
 ```
