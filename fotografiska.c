@@ -77,7 +77,7 @@ static char const * const USAGE_EPILOGUE = ""
   Turns a date from "YYYY:mm:dd HH:MM:SS" to "YYYY.mm.dd_HH.MM.SS".
 */
 static void format_exif_date(char *date) {
-  size_t const len = strlen(date);
+  size_t const len = pstr_len(date);
   for (uint32_t idx = 0; idx < len; idx++) {
     if (date[idx] == ':') {
       date[idx] = '.';
@@ -111,10 +111,8 @@ static bool get_exif_tag(
 static void split_creation_date(
   char const *file_creation_date, char *file_creation_year, char *file_creation_month
 ) {
-  strncpy(file_creation_year, file_creation_date, 4);
-  file_creation_year[4] = 0;
-  strncpy(file_creation_month, file_creation_date + 5, 2);
-  file_creation_month[2] = 0;
+  assert(pstr_copy_n(file_creation_year, 5, file_creation_date, 4));
+  assert(pstr_copy_n(file_creation_month, 3, file_creation_date + 5, 2));
 }
 
 
@@ -128,11 +126,10 @@ static bool move_file_to_dest_dir(
   struct stat st = {};
 
   // Make sure the first part of the target directory exists (the year)
-  char year_directory[MAX_PATH];
-  int32_t year_directory_n_chars_used = snprintf(
-    year_directory, MAX_PATH, "%s/%s", dest_dir, file_creation_year
-  );
-  if (year_directory_n_chars_used >= MAX_PATH) {
+  char year_directory[MAX_PATH] = {};
+  if (
+    !pstr_vcat(year_directory, MAX_PATH, dest_dir, "/", file_creation_year, NULL)
+  ) {
     printf("Your file paths are too long, so we couldn't move this file.\n");
     return false;
   }
@@ -145,11 +142,10 @@ static bool move_file_to_dest_dir(
   }
 
   // Make sure the month subdirectory exists
-  char month_directory[MAX_PATH];
-  int32_t month_directory_n_chars_used = snprintf(
-    month_directory, MAX_PATH, "%s/%s", year_directory, file_creation_month
-  );
-  if (month_directory_n_chars_used >= MAX_PATH) {
+  char month_directory[MAX_PATH] = {};
+  if (
+    !pstr_vcat(month_directory, MAX_PATH, year_directory, "/", file_creation_month, NULL)
+  ) {
     printf("Your file paths are too long, so we couldn't move this file.\n");
     return false;
   }
@@ -162,11 +158,10 @@ static bool move_file_to_dest_dir(
   }
 
   // Make the final destination path
-  char target_path[MAX_PATH];
-  int32_t target_path_n_chars_used = snprintf(
-    target_path, MAX_PATH, "%s/%s", month_directory, file_new_name
-  );
-  if (target_path_n_chars_used >= MAX_PATH) {
+  char target_path[MAX_PATH] = {};
+  if (
+    !pstr_vcat(target_path, MAX_PATH, month_directory, "/", file_new_name, NULL)
+  ) {
     printf("Your file paths are too long, so we couldn't move this file.\n");
     return false;
   }
@@ -189,11 +184,11 @@ static void sort_file_into_dest_dir(
   tinydir_file const *file, char *file_buffer, size_t const file_buffer_size,
   char const *dest_dir, bool is_dry_run
 ) {
-  char file_basename[MAX_PATH];
-  char file_new_name[MAX_PATH];
-  char file_creation_date[20]; // YYYY.mm.dd_HH.MM.SS0
-  char file_creation_year[5]; // YYYY0
-  char file_creation_month[3]; // mm0
+  char file_basename[MAX_PATH] = {};
+  char file_new_name[MAX_PATH] = {};
+  char file_creation_date[20] = {}; // YYYY.mm.dd_HH.MM.SS0
+  char file_creation_year[5] = {}; // YYYY0
+  char file_creation_month[3] = {}; // mm0
   size_t file_size;
   size_t file_hashable_size;
   FILE *file_handle;
@@ -206,8 +201,8 @@ static void sort_file_into_dest_dir(
   }
 
   // Get name without extension
-  strncpy(file_basename, file->name, MAX_PATH);
-  file_basename[strlen(file_basename) - strlen(file->extension) - 1] = 0;
+  assert(pstr_copy(file_basename, MAX_PATH, file->name));
+  pstr_slice_to(file_basename, pstr_len(file_basename) - pstr_len(file->extension) - 1);
 
   // Get creation date
   ExifData const *exif_data = exif_data_new_from_file(file->path);
@@ -225,6 +220,7 @@ static void sort_file_into_dest_dir(
   if (could_get_exif) {
     format_exif_date(file_creation_date);
   } else {
+    // I don't love using `localtime()` and `strftime()`, but here we are.
     struct tm const *creation_date_tm = localtime(&file->_s.st_mtim.tv_sec);
     strftime(
       file_creation_date, sizeof(file_creation_date),
@@ -253,16 +249,17 @@ static void sort_file_into_dest_dir(
 
   // Compute the hash
   XXH64_hash_t const hash = XXH64(file_buffer, file_hashable_size, 0);
+  char hash_string[32];
+  // TODO: Add a function for this to pstr
+  snprintf(hash_string, 32, "%lx", (long unsigned)hash_string);
 
-  int32_t file_new_name_chars_used = snprintf(
-    file_new_name,
-    MAX_PATH,
-    "%s_%lx_%s.%s",
-    file_creation_date,
-    (unsigned long)hash,
-    file_basename,
-    file->extension
-  );
+  if (!pstr_vcat(
+    file_new_name, MAX_PATH,
+    file_creation_date, "_", hash_string, "_", file_basename, ".", file->extension, NULL
+  )) {
+    printf("Your file paths are too long, so we couldn't move this file.\n");
+    goto cleanup_fclose;
+  }
 
   printf(
     "%s -> %s/%s/%s/%s\n",
@@ -272,11 +269,6 @@ static void sort_file_into_dest_dir(
     file_creation_month,
     file_new_name
   );
-
-  if (file_new_name_chars_used >= MAX_PATH) {
-    printf("Your file paths are too long, so we couldn't move this file.\n");
-    goto cleanup_fclose;
-  }
 
   if (is_dry_run) {
     printf("(dry run, not doing anything)\n");
