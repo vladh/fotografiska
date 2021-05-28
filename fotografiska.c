@@ -297,7 +297,8 @@ cleanup_return:
 
 
 /*!
-  See print_usage() for options.
+  Runs fotografiska with commandline arguments.
+  See top of the file for arguments.
 */
 int main(int argc, const char **argv) {
   char const *src_dir = NULL;
