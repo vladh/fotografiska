@@ -1,1 +1,2 @@
 -I/usr/local/opt/libexif/include/
+-std=c99

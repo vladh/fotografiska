@@ -244,7 +244,7 @@ static void sort_file_into_dest_dir(
     format_exif_date(file_creation_date);
   } else {
     // I don't love using `localtime()` and `strftime()`, but here we are.
-    struct tm const *creation_date_tm = localtime(&file->_s.st_mtim.tv_sec);
+    struct tm const *creation_date_tm = localtime(&file->_s.st_mtime);
     strftime(
       file_creation_date, sizeof(file_creation_date),
       "%Y.%m.%d_%H.%M.%S", creation_date_tm
