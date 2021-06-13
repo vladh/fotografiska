@@ -1,4 +1,4 @@
-.PHONY: unix run
+.PHONY: unix windows
 
 unix:
 	gcc fotografiska.c -o bin/fotografiska -lexif -g -Wall -Wno-format-overflow -Wno-unused-variable -std=c99
