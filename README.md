@@ -1,3 +1,8 @@
+<!--
+© 2022 Vlad-Stefan Harbuz <vlad@vladh.net>
+SPDX-License-Identifier: blessing
+-->
+
 ![pstr string functions](images/character_bouhan_camera_sm1.png)
 
 # fotografiska
