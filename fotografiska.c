@@ -152,7 +152,7 @@ static bool move_file_to_dest_dir(
     return false;
   }
   if (stat(year_directory, &st) == -1) {
-    printf("info  | Creating directory: %s\n", year_directory);
+    printf("Creating directory: %s\n", year_directory);
     if (mkdir(year_directory, 0700) == -1) {
       printf("ERROR: Could not create directory! Please check you have permissions.\n");
       return false;
@@ -168,7 +168,7 @@ static bool move_file_to_dest_dir(
     return false;
   }
   if (stat(month_directory, &st) == -1) {
-    printf("info  | Creating directory: %s\n", month_directory);
+    printf("Creating directory: %s\n", month_directory);
     if (mkdir(month_directory, 0700) == -1) {
       printf("error | Could not create directory! Please check you have permissions.\n");
       return false;
@@ -186,7 +186,7 @@ static bool move_file_to_dest_dir(
 
   // Check if the file already exists
   if (stat(target_path, &st) == 0) {
-    printf("info  | %s already exists, so we're not going to do anything.\n", target_path);
+    printf("%s already exists, so we're not going to do anything.\n", target_path);
     return false;
   }
 
@@ -287,8 +287,15 @@ static void sort_file_into_dest_dir(
     goto cleanup_fclose;
   }
 
+  char const *dry_run_str = "";
+
+  if (is_dry_run) {
+    dry_run_str = "(dry run) ";
+  }
+
   printf(
-    "info  | %s -> %s/%s/%s/%s\n",
+    "%s%s -> %s/%s/%s/%s\n",
+    dry_run_str,
     file->path,
     dest_dir,
     file_creation_year,
@@ -296,9 +303,7 @@ static void sort_file_into_dest_dir(
     file_new_name
   );
 
-  if (is_dry_run) {
-    printf("info  | (dry run, not doing anything)\n");
-  } else {
+  if (!is_dry_run) {
     bool could_move = move_file_to_dest_dir(
       file->path, dest_dir, file_new_name, file_creation_year, file_creation_month
     );
@@ -361,7 +366,8 @@ int main(int argc, const char **argv) {
   printf("This can sometimes take a moment\n");
   tinydir_dir dir;
   tinydir_open_sorted(&dir, src_dir);
-  printf("%s: %zu files\n", src_dir, dir.n_files);
+  // Disregard the . and .. entries
+  printf("%s: %zu files\n", src_dir, dir.n_files - 2);
 
   // Go through over every file in the directory, and try to put it in the right place
   for (uint32_t idx = 0; idx < dir.n_files; idx++) {
