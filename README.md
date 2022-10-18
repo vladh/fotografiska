@@ -10,6 +10,9 @@ SPDX-License-Identifier: blessing
 fotografiska organises your photos/videos into a certain directory structure that is easy
 to browse with a regular file manager.
 
+**NOTE:** This project has been superseded by
+[fotografiska2](https://git.sr.ht/~vladh/fotografiska2/).
+
 Your photos/videos should be in a single folder (files in nested folders won't be used).
 They will be organised into subfolders by year and month, and their filename will start
 with the date they were taken, as well as including a unique hash of (part of) the file.
@@ -85,6 +88,10 @@ Do a dry run first to confirm that everything looks ok:
 ```
 
 ## Roadmap
+
+**NOTE:** This project has been superseded by
+[fotografiska2](https://git.sr.ht/~vladh/fotografiska2/), so these items will
+not be fixed.
 
 * Add precompiled builds (in particular for Windows)
 * Move away from libexif and towards something that (1) is more lightweight
